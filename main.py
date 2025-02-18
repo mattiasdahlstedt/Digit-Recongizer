@@ -7,6 +7,7 @@ from torch.utils.data import Dataset, DataLoader
 import math
 
 
+# Creating a data class where the data is read and placed in correct dimensions from an csv file
 class DigitDataset(Dataset):
     def __init__(self, path):
         xy = np.loadtxt('./data/' + path, delimiter=",", dtype=np.float32, skiprows=1)
@@ -37,12 +38,9 @@ total_samples = train_dataset.n_samples
 n_iterartions = math.ceil(total_samples/batch_size)
 
 train_dataloader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
-test_dataloader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False)
+test_dataloader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=True)
 
-
-for images, labels in train_dataloader:
-    print("images.shape: ", images.shape)
-    break
+#defining the convolutional neural network, processes the image to end up with a tensor with 10 different probabilities for the 10 different classes
 class NeuralNet(nn.Module):
     def __init__(self, num_classes):
         super(NeuralNet, self).__init__()
@@ -85,10 +83,6 @@ for epoch in range(num_epochs):
         outputs = model(images)
         labels = torch.squeeze(labels)
 
-        #print(outputs.dtype)
-        #print(labels.dtype)
-        
-
         loss = criterion(outputs, labels)
         optimizer.zero_grad()
         loss.backward()
@@ -97,20 +91,35 @@ for epoch in range(num_epochs):
             print(f'epoch {epoch+1} / {num_epochs}, step {i+1}/{n_tot_steps}, loss = {loss.item():.4f}')
 
 
+# Calculating the accuracy in when using the model on the test data
 with torch.no_grad():
     n_correct = 0
     n_samples = 0
 
     for images, labels in test_dataloader:
+        sample_image = torch.squeeze(images[0])
+        sample_label = labels[0][0].tolist()
         outputs = model(images)
+        sample_output_probabilities = outputs[0]
+        sample_prediction = torch.argmax(sample_output_probabilities).tolist()
         labels = torch.squeeze(labels)
         _, predictions = torch.max(outputs, 1)
         n_samples += labels.shape[0]
-        print('nr of total samples')
-        print(n_samples)
         n_correct += (predictions == labels).sum().item()
-        print('Nr of correct predictions')
-        print(n_correct)
+        
     acc = n_correct / n_samples
+
+
+    print('nr of total samples')
+    print(n_samples)
+    print('Nr of correct predictions')
+    print(n_correct)
     print(f'accuracy: {acc}')
+
+
+    # Show random figure of the test set with the correct classification and the prediction
+    plt.figure()
+    plt.title('Correct label: ' + str(sample_label) + ', Predicted label: ' + str(sample_prediction))
+    plt.imshow(sample_image, cmap='gray_r')
+    plt.show()
 
